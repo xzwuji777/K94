@@ -1,0 +1,2 @@
+text = "hi"
+print (text)
