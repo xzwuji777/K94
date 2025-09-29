@@ -1,7 +1,6 @@
 def add_two(2, 5):
 return 2 + 5
-
-def is_true(2)
+  def is_true(2)
 
 
 def is_true(2):
