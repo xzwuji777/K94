@@ -1,6 +1,6 @@
-def my_function():
-    print('say_hi')
-my_function()
-def my_function(say_hi):
-    print(say_hi + "azra")
-my_function("azra")
+def say_hi(name):
+    return "greetings" + name +"!"
+say_hi("melly")
+say_hi("sara")
+say_hi("mischa")
+#supposedly jadi tp alak takle????

@@ -1,8 +1,8 @@
 def check_string(str):
     if str.startswith("The"):
-     print("Found it!")
+     return("Found it!")
     else:
-       print("Nope")
+       return("Nope")
 
 
 str1 = "The"
@@ -12,3 +12,5 @@ str3 = "Theatre can be boring"
 print(check_string(str1))
 print(check_string(str2))
 print(check_string(str3))
+
+#saipzz

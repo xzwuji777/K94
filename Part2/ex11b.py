@@ -1,10 +1,14 @@
-def calculate(1, 2, 3):
-  if 1 == "+":
-    return 1 + 2
-elif 2 == "-":
-    return 2 - 2
-if 3 == "*":
-    return 3 * 2
-if 1 == "/":
-    return 1 / 3
-print(calculate(1, "/", 1))
+def calculate(num1, operator, num2):
+    if operator == '+':
+        return num1 + num2
+    elif operator == "-":
+        return num1 - num2 
+    elif operator == "*":
+        return num1 * num2
+    elif operator == "/":
+        return num1 / num2
+    else: 
+        return "invalid operator"
+print(calculate(10, "+", 90))
+print(calculate(20, "/", 30))
+#niceu!
