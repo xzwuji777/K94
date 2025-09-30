@@ -67,21 +67,36 @@ if __name__ == "__main__":
     main()
 import requests
 
-API_KEY = "AIzaSyABzSrA-c7IRzTzE50iFXFrZRbPoQI7a14"
-MODEL = "gemini-1.5-flash"  # or "gemini-1.5-flash"
+API_KEY = "YOUR_API_KEY"
+MODEL = "gemini-1.5-flash"  # or "gemini-1.5-pro"
 
 url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
 
 headers = {
-    "Authorization": f"Bearer {AIzaSyABzSrA-c7IRzTzE50iFXFrZRbPoQI7a14}",
+    "Authorization": f"Bearer {API_KEY}",
     "Content-Type": "application/json"
 }
 
-data = {
-    "contents": [
-        {"parts":[{"text":"Write me a short poem about friendship."}]}
-    ]
-}
+# Store conversation history
+conversation = []
 
-response = requests.post(url, headers=headers, json=data)
-print(response.json())
+def chat_with_gemini(user_message):
+    global conversation
+    conversation.append({"role": "user", "parts": [{"text": user_message}]})
+
+    data = {"contents": conversation}
+    response = requests.post(url, headers=headers, json=data).json()
+
+    model_reply = response["candidates"][0]["content"]["parts"][0]["text"]
+    conversation.append({"role": "model", "parts": [{"text": model_reply}]})
+
+    return model_reply
+
+# Simple chat loop
+print("Chatbot (type 'exit' to quit):")
+while True:
+    user_input = input("You: ")
+    if user_input.lower() == "exit":
+        break
+    reply = chat_with_gemini(user_input)
+    print("Bot:", reply)
