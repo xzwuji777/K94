@@ -143,3 +143,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+st.write("Client ID:", st.secrets["spotify"]["CLIENT_ID"][:10] + "...")
+st.write("Redirect URI:", st.secrets["spotify"]["REDIRECT_URI"])
