@@ -7,7 +7,7 @@ import urllib.parse
 # ========== CONFIG ==========
 GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel("gemini-1.5-flash")  # or "gemini-2.5-flash"
+model = genai.GenerativeModel("gemini-2.5-flash")  
 
 # Spotify Auth
 sp_oauth = SpotifyOAuth(
