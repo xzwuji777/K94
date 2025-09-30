@@ -65,3 +65,23 @@ def main():
 
 if __name__ == "__main__":
     main()
+import requests
+
+API_KEY = "AIzaSyABzSrA-c7IRzTzE50iFXFrZRbPoQI7a14"
+MODEL = "gemini-1.5-flash"  # or "gemini-1.5-flash"
+
+url = f"https://generativelanguage.googleapis.com/v1beta/models/{MODEL}:generateContent"
+
+headers = {
+    "Authorization": f"Bearer {AIzaSyABzSrA-c7IRzTzE50iFXFrZRbPoQI7a14}",
+    "Content-Type": "application/json"
+}
+
+data = {
+    "contents": [
+        {"parts":[{"text":"Write me a short poem about friendship."}]}
+    ]
+}
+
+response = requests.post(url, headers=headers, json=data)
+print(response.json())
