@@ -17,8 +17,8 @@ def initialize_session_state():
 # Music suggestions by genre
 songs = {
     'ballad': ['odoriko', 'labyrinth by taylor swift', 'cause you have to by lany'],
-    'kpop': ['tempo by exo', 'song E', 'song F'],
-    'hiphop': ['apt', 'song H', 'song I'],
+    'kpop': ['tempo by exo', 'thunder', 'baddesire'],
+    'hiphop': ['apt', 'tears', 'go!'],
     'pop-punk': ['not ok by 5sos', 'no choice by fly by midnight', 'song L'],
     'galau': ['mjol', 'song Y', 'song Z']
 }
