@@ -1,2 +1,3 @@
-google-0generativeai
 streamlit
+Pillow
+google-generativeai
