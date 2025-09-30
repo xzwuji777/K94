@@ -80,7 +80,7 @@ def get_song_recommendations(user_message: str, spotify_data=None):
 
 # ========== CHAT UI ==========
 def chat_ui():
-    st.subheader("🎵 Ask for Song Recommendations (Spotify + AI)")
+    st.subheader("🎵 Go-To Music (Spotify + AI)")
 
     initialize_session_state()
 
@@ -144,5 +144,3 @@ def main():
 if __name__ == "__main__":
     main()
 
-st.write("Client ID:", st.secrets["spotify"]["CLIENT_ID"][:10] + "...")
-st.write("Redirect URI:", st.secrets["spotify"]["REDIRECT_URI"])
