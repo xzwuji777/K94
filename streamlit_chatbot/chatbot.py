@@ -6,7 +6,7 @@ GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 genai.configure(api_key=GOOGLE_API_KEY)
 
 # Pick a reliable Gemini model
-model = genai.GenerativeModel("gemini-1.5-pro")
+model = genai.GenerativeModel("gemini-2.5-pro")
 
 # ========== STATE INIT ==========
 def initialize_session_state():
