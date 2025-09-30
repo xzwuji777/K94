@@ -1,19 +1,28 @@
 import streamlit as st
 import google.generativeai as genai
+model = genai.GenerativeModel("gemini-pro")  # for text
+import streamlit as st
+import google.generativeai as genai
+
+GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+genai.configure(api_key=GOOGLE_API_KEY)
+model = genai.GenerativeModel("gemini-pro")
+response = model.generate_content("Suggest 5 sad pop songs")
+suggestions = response.text  # This is important
+prompt = "Suggest 5 upbeat K-pop songs suitable for a gym workout."
+
 
 # ========== SETUP ==========
-# Load your Gemini API key securely from secrets
+# Load Gemini API key from secrets
 GOOGLE_API_KEY = st.secrets.get("GOOGLE_API_KEY", "")
-
-# Safety check: If key not found, stop app
 if not GOOGLE_API_KEY:
     st.error("❌ GOOGLE_API_KEY not found in .streamlit/secrets.toml.")
     st.stop()
 
-# Configure the Gemini client
+# Configure Gemini
 genai.configure(api_key=GOOGLE_API_KEY)
 
-# Load the Gemini model (text-only)
+# Load the Gemini model
 try:
     model = genai.GenerativeModel('gemini-pro')
 except Exception as e:
@@ -21,91 +30,38 @@ except Exception as e:
     st.exception(e)
     st.stop()
 
-# ========== SESSION STATE ==========
-def initialize_session_state():
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    if "song_suggestions" not in st.session_state:
-        st.session_state.song_suggestions = []
+# ========== APP TITLE ==========
+st.set_page_config(page_title="🎵 AI Mood & Genre Music Recommender")
+st.title("🎶 AI Music Recommender by Genre & Mood")
 
-# ========== GET SONG SUGGESTIONS ==========
-def get_songs_from_genre(genre):
+# ========== USER INPUT ==========
+genre = st.text_input("🎧 Enter a music genre (e.g., pop, jazz, hip hop):")
+mood = st.text_input("😊 Enter a mood (e.g., happy, sad, relaxed, energetic):")
+
+# ========== GET RECOMMENDATIONS ==========
+def get_song_suggestions(genre, mood):
     prompt = (
-        f"Suggest 5 popular songs for the music genre '{genre}'. "
-        "Provide only the song titles, separated by commas."
+        f"Suggest 5 songs that match the music genre '{genre}' "
+        f"and the mood '{mood}'. Return only the song titles with artist names, as a bullet list."
     )
 
     try:
         response = model.generate_content(prompt)
-        songs_text = response.text.strip()
-        songs = [s.strip() for s in songs_text.split(",") if s.strip()]
-        return songs
+        return response.text.strip()
     except Exception as e:
-        st.error("⚠️ Could not get song suggestions.")
+        st.error("⚠️ Gemini API failed to respond.")
         st.exception(e)
-        return []
+        return ""
 
-# ========== MUSIC RECOMMENDER ==========
-def music_recommender():
-    st.subheader("🎵 AI Song Recommendations")
-    genre = st.text_input("🎧 Enter a music genre (e.g., pop, hip hop, jazz):")
+# ========== DISPLAY RESULTS ==========
+if genre and mood:
+    with st.spinner("Finding songs for your vibe... 🎶"):
+        suggestions = get_song_suggestions(genre, mood)
 
-    if genre:
-        with st.spinner(f"Finding songs for genre: {genre}..."):
-            songs = get_songs_from_genre(genre)
-
-        if songs:
-            st.success("✅ Songs found!")
-            for idx, song in enumerate(songs, 1):
-                st.write(f"{idx}. {song}")
-        else:
-            st.warning("😕 No songs returned. Try a different genre.")
-
-# ========== CHAT INTERFACE ==========
-def chat_ui():
-    st.subheader("💬 Ask Anything (Gemini Chatbot)")
-    initialize_session_state()
-
-    # Show previous messages
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
-
-    # Handle user input
-    user_input = st.chat_input("Type your question...")
-    if user_input:
-        # Display user message
-        st.chat_message("user").write(user_input)
-        st.session_state.messages.append({"role": "user", "content": user_input})
-
-        # Generate Gemini response
-        try:
-            ai_response = model.generate_content(user_input).text
-        except Exception as e:
-            ai_response = "⚠️ Gemini AI could not generate a response."
-            st.error("Gemini error:")
-            st.exception(e)
-
-        # Display assistant response
-        st.chat_message("assistant").write(ai_response)
-        st.session_state.messages.append({"role": "assistant", "content": ai_response})
-
-# ========== SIDEBAR ==========
-def sidebar():
-    with st.sidebar:
-        st.title("📱 Connect With Us")
-        st.markdown("- Instagram: [@yourhandle](https://instagram.com)")
-        st.markdown("- TikTok: [@yourhandle](https://tiktok.com)")
-
-# ========== MAIN APP ==========
-def main():
-    st.set_page_config(page_title="AI Music Chatbot", page_icon="🎶")
-    st.title("🎶 Gemini AI Music Chatbot")
-
-    initialize_session_state()
-    sidebar()
-    music_recommender()
-    chat_ui()
-
-if __name__ == "__main__":
-    main()
+    if suggestions:
+        st.subheader("🎵 Suggested Songs:")
+        st.markdown(suggestions)
+    else:
+        st.warning("No suggestions found. Try a different genre or mood.")
+else:
+    st.info("Enter both a genre and mood to get started.")
