@@ -18,9 +18,9 @@ def initialize_session_state():
 songs = {
     'ballad': ['odoriko', 'labyrinth by taylor swift', 'cause you have to by lany'],
     'kpop': ['tempo by exo', 'song E', 'song F'],
-    'hiphop': ['song G', 'song H', 'song I'],
+    'hiphop': ['apt', 'song H', 'song I'],
     'pop-punk': ['not ok by 5sos', 'no choice by fly by midnight', 'song L'],
-    'galau': ['song X', 'song Y', 'song Z']
+    'galau': ['mjol', 'song Y', 'song Z']
 }
 
 # ========== MUSIC SUGGESTION ==========
