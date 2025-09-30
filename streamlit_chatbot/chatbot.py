@@ -1,64 +1,72 @@
 import streamlit as st
-import random
-from PIL import Image
 import google.generativeai as genai
+from PIL import Image
+import base64
+import io
 
 # ========== SETUP ==========
 # Configure API key for Gemini
 GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel('gemini-pro')
+model_vision = genai.GenerativeModel("gemini-pro-vision")
+model_text = genai.GenerativeModel("gemini-pro")
 
-# Initialize session state for chat
+# ========== INIT SESSION ==========
 def initialize_session_state():
     if "messages" not in st.session_state:
         st.session_state.messages = []
+    if "suggested_songs" not in st.session_state:
+        st.session_state.suggested_songs = []
 
-# Music suggestions by genre
-songs = {
-    'ballad': ['odoriko', 'labyrinth by taylor swift', 'cause you have to by lany'],
-    'kpop': ['tempo by exo', 'thunder', 'baddesire'],
-    'hiphop': ['apt', 'tears', 'go!'],
-    'pop-punk': ['not ok by 5sos', 'no choice by fly by midnight', 'somebodytoyou'],
-    'galau': ['mjol', 'bergemasampaiselamanya', 'happier']
-}
+# ========== CSS STYLING ==========
+def apply_custom_css():
+    st.markdown(
+        """
+        <style>
+            .stChatMessage {
+                background-color: #ffe5b4 !important;  /* Peach color */
+                border-radius: 10px;
+                padding: 10px;
+                margin-bottom: 10px;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
-# ========== MUSIC SUGGESTION ==========
-def music_recommender():
-    st.subheader("🎵 Music Recommendation")
-    genre = st.selectbox("Choose your music genre", list(songs.keys()))
-    
-    suggestion_index = 0
-    suggestions = songs[genre]
-    
-    while suggestion_index < len(suggestions):
-        song = suggestions[suggestion_index]
-        st.write(f"How about choosing **{song}**?")
-        
-        audio_file = f"streamlit_chatbot/songs/{song.split()[0].lower()}.mp3"
-        st.audio(audio_file)
-        
-        taste = st.selectbox("Is it to your music taste?", ['yes', 'no'], key=f"taste_{suggestion_index}")
-        
-        if taste == 'yes':
-            st.success("Glad you liked it! 🎶")
-            break
-        else:
-            suggestion_index += 1
-    
-    if suggestion_index == len(suggestions):
-        st.warning("No more suggestions in this genre!")
-
-# ========== POST IMAGE ==========
-def image_uploader():
+# ========== IMAGE UPLOADER WITH AI ==========
+def image_uploader_and_ai():
     st.subheader("🖼️ Drop Your Post!")
     uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-    
+
     if uploaded_file is not None:
         image = Image.open(uploaded_file)
         st.image(image, caption="Your uploaded image", use_column_width=True)
 
-# ========== CHAT ==========
+        # Convert image to bytes
+        image_bytes = io.BytesIO()
+        image.save(image_bytes, format='PNG')
+        image_bytes = image_bytes.getvalue()
+
+        # Ask Gemini to suggest songs based on the image
+        st.info("Analyzing image and generating song suggestions...")
+
+        prompt = "Based on this image, suggest 3 suitable song titles. Keep it short."
+
+        response = model_vision.generate_content([
+            prompt,
+            image_bytes
+        ])
+
+        # Store and display suggested songs
+        suggested = response.text.strip().split("\n")
+        st.session_state.suggested_songs = [s.strip("•- ") for s in suggested if s.strip()]
+        st.success("Songs generated based on image!")
+
+        for song in st.session_state.suggested_songs:
+            st.write(f"- 🎵 {song}")
+
+# ========== CHAT UI ==========
 def chat_ui():
     st.subheader("💬 Chat with Us")
     initialize_session_state()
@@ -73,26 +81,27 @@ def chat_ui():
         
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        response = f"You said: {prompt}"
+        # Get response from Gemini
+        response = model_text.generate_content(prompt).text
         with st.chat_message("assistant"):
             st.write(response)
-        
+
         st.session_state.messages.append({"role": "assistant", "content": response})
 
 # ========== SIDEBAR ==========
 def sidebar():
     with st.sidebar:
         st.title("📱 Follow Us")
-        st.markdown("**Instagram**")
-        st.markdown("**TikTok**")
+        st.markdown("**Instagram**: @yourhandle")
+        st.markdown("**TikTok**: @yourhandle")
 
-# ========== MAIN APP ==========
+# ========== MAIN ==========
 def main():
-    st.title("🎶 Music Post App")
+    apply_custom_css()
+    st.title("🎶 Music Post App with AI")
 
     sidebar()
-    image_uploader()
-    music_recommender()
+    image_uploader_and_ai()
     chat_ui()
 
 if __name__ == "__main__":
