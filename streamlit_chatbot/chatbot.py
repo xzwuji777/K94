@@ -1,67 +1,98 @@
 import streamlit as st
+import random
+from PIL import Image
 import google.generativeai as genai
-model = genai.GenerativeModel("gemini-pro")  # for text
-import streamlit as st
-import google.generativeai as genai
-
-GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
-genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel("gemini-pro")
-response = model.generate_content("Suggest 5 sad pop songs")
-suggestions = response.text  # This is important
-prompt = "Suggest 5 upbeat K-pop songs suitable for a gym workout."
-
 
 # ========== SETUP ==========
-# Load Gemini API key from secrets
-GOOGLE_API_KEY = st.secrets.get("GOOGLE_API_KEY", "")
-if not GOOGLE_API_KEY:
-    st.error("❌ GOOGLE_API_KEY not found in .streamlit/secrets.toml.")
-    st.stop()
-
-# Configure Gemini
+# Configure API key for Gemini
+GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 genai.configure(api_key=GOOGLE_API_KEY)
+model = genai.GenerativeModel('gemini-pro')
 
-# Load the Gemini model
-try:
-    model = genai.GenerativeModel('gemini-pro')
-except Exception as e:
-    st.error("❌ Failed to load Gemini model.")
-    st.exception(e)
-    st.stop()
+# Initialize session state for chat
+def initialize_session_state():
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-# ========== APP TITLE ==========
-st.set_page_config(page_title="🎵 AI Mood & Genre Music Recommender")
-st.title("🎶 AI Music Recommender by Genre & Mood")
+# Music suggestions by genre
+songs = {
+    'ballad': ['odoriko', 'labyrinth by taylor swift', 'cause you have to by lany'],
+    'kpop': ['tempo by exo', 'thunder', 'baddesire'],
+    'hiphop': ['apt', 'tears', 'go!'],
+    'pop-punk': ['not ok by 5sos', 'no choice by fly by midnight', 'somebodytoyou'],
+    'galau': ['mjol', 'bergemasampaiselamanya', 'happier']
+}
 
-# ========== USER INPUT ==========
-genre = st.text_input("🎧 Enter a music genre (e.g., pop, jazz, hip hop):")
-mood = st.text_input("😊 Enter a mood (e.g., happy, sad, relaxed, energetic):")
+# ========== MUSIC SUGGESTION ==========
+def music_recommender():
+    st.subheader("🎵 Music Recommendation")
+    genre = st.selectbox("Choose your music genre", list(songs.keys()))
+    
+    suggestion_index = 0
+    suggestions = songs[genre]
 
-# ========== GET RECOMMENDATIONS ==========
-def get_song_suggestions(genre, mood):
-    prompt = (
-        f"Suggest 5 songs that match the music genre '{genre}' "
-        f"and the mood '{mood}'. Return only the song titles with artist names, as a bullet list."
-    )
+    while suggestion_index < len(suggestions):
+        song = suggestions[suggestion_index]
+        st.write(f"How about choosing **{song}**?")
+        
+        audio_file = f"streamlit_chatbot/songs/{song.split()[0].lower()}.mp3"
+        st.audio(audio_file)
 
-    try:
-        response = model.generate_content(prompt)
-        return response.text.strip()
-    except Exception as e:
-        st.error("⚠️ Gemini API failed to respond.")
-        st.exception(e)
-        return ""
+        taste = st.selectbox("Is it to your music taste?", ['yes', 'no'], key=f"taste_{suggestion_index}")
 
-# ========== DISPLAY RESULTS ==========
-if genre and mood:
-    with st.spinner("Finding songs for your vibe... 🎶"):
-        suggestions = get_song_suggestions(genre, mood)
+        if taste == 'yes':
+            st.success("Glad you liked it! 🎶")
+            break
+        else:
+            suggestion_index += 1
 
-    if suggestions:
-        st.subheader("🎵 Suggested Songs:")
-        st.markdown(suggestions)
-    else:
-        st.warning("No suggestions found. Try a different genre or mood.")
-else:
-    st.info("Enter both a genre and mood to get started.")
+    if suggestion_index == len(suggestions):
+        st.warning("No more suggestions in this genre!")
+
+# ========== POST IMAGE ==========
+def image_uploader():
+    st.subheader("🖼️ Drop Your Post!")
+    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
+
+    if uploaded_file is not None:
+        image = Image.open(uploaded_file)
+        st.image(image, caption="Your uploaded image", use_column_width=True)
+
+# ========== CHAT ==========
+def chat_ui():
+    st.subheader("💬 Chat with Us")
+    initialize_session_state()
+
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+
+    if prompt := st.chat_input("What's on your mind?"):
+        with st.chat_message("user"):
+            st.write(prompt)
+
+        st.session_state.messages.append({"role": "user", "content": prompt})
+
+        response = f"You said: {prompt}"  # Placeholder response (not Gemini yet)
+        with st.chat_message("assistant"):
+            st.write(response)
+
+        st.session_state.messages.append({"role": "assistant", "content": response})
+
+# ========== SIDEBAR ==========
+def sidebar():
+    with st.sidebar:
+        st.title("📱 Follow Us")
+        st.markdown("**Instagram**")
+        st.markdown("**TikTok**")
+
+# ========== MAIN APP ==========
+def main():
+    st.title("🎶 Music Post App")
+    sidebar()
+    image_uploader()
+    music_recommender()
+    chat_ui()
+
+if __name__ == "__main__":
+    main()
