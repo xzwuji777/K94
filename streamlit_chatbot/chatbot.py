@@ -97,3 +97,6 @@ def main():
 if __name__ == "__main__":
     main()
 
+import streamlit as st
+st.write("Google API Key is:", st.secrets["GOOGLE_API_KEY"])
+
