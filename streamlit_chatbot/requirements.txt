@@ -1,3 +1,11 @@
 streamlit
 Pillow
 google-generativeai
+# Google Gemini API
+GOOGLE_API_KEY = "your-google-api-key"
+
+# Spotify API
+SPOTIFY_CLIENT_ID = "your-spotify-client-id"
+SPOTIFY_CLIENT_SECRET = "your-spotify-client-secret"
+SPOTIFY_REDIRECT_URI = "http://localhost:8501"
+.streamlit/secrets.toml
