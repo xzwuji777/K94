@@ -35,7 +35,7 @@ def music_recommender():
         song = suggestions[suggestion_index]
         st.write(f"How about choosing **{song}**?")
         
-        audio_file = f"songs/{song.split()[0].lower()}.mp3"
+        audio_file = f"streamlit_chatbot/songs/{song.split()[0].lower()}.mp3"
         st.audio(audio_file)
         
         taste = st.selectbox("Is it to your music taste?", ['yes', 'no'], key=f"taste_{suggestion_index}")
