@@ -1,97 +1,65 @@
+# chatbot.py
 import streamlit as st
-import random
-from PIL import Image
 import google.generativeai as genai
 
-# ========== SETUP ==========
-# Configure API key for Gemini
-GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
-genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel('gemini-pro')
+# ========== CONFIG ==========
 
-# Initialize session state for chat
+# Load Gemini API key from Streamlit secrets
+GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+
+# Configure Gemini
+genai.configure(api_key=GOOGLE_API_KEY)
+model = genai.GenerativeModel("gemini-pro")
+
+# ========== STATE INIT ==========
 def initialize_session_state():
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-# Music suggestions by genre
-songs = {
-    'ballad': ['odoriko', 'labyrinth by taylor swift', 'cause you have to by lany'],
-    'kpop': ['tempo by exo', 'thunder', 'baddesire'],
-    'hiphop': ['apt', 'tears', 'go!'],
-    'pop-punk': ['not ok by 5sos', 'no choice by fly by midnight', 'somebodytoyou'],
-    'galau': ['mjol', 'bergemasampaiselamanya', 'happier']
-}
+# ========== SONG SUGGESTION LOGIC ==========
+def get_songs_from_genre_and_mood(genre, mood):
+    prompt = (
+        f"Suggest 5 songs that fit the '{genre}' genre and a '{mood}' mood. "
+        "List only the song titles and artists in a clean, bullet-point format."
+    )
+    try:
+        response = model.generate_content(prompt)
+        return response.text.strip()
+    except Exception as e:
+        return f"❌ Failed to generate suggestions: {e}"
 
-# ========== MUSIC SUGGESTION ==========
-def music_recommender():
-    st.subheader("🎵 Music Recommendation")
-    genre = st.selectbox("Choose your music genre", list(songs.keys()))
-    
-    suggestion_index = 0
-    suggestions = songs[genre]
-
-    while suggestion_index < len(suggestions):
-        song = suggestions[suggestion_index]
-        st.write(f"How about choosing **{song}**?")
-        
-        audio_file = f"streamlit_chatbot/songs/{song.split()[0].lower()}.mp3"
-        st.audio(audio_file)
-
-        taste = st.selectbox("Is it to your music taste?", ['yes', 'no'], key=f"taste_{suggestion_index}")
-
-        if taste == 'yes':
-            st.success("Glad you liked it! 🎶")
-            break
-        else:
-            suggestion_index += 1
-
-    if suggestion_index == len(suggestions):
-        st.warning("No more suggestions in this genre!")
-
-# ========== POST IMAGE ==========
-def image_uploader():
-    st.subheader("🖼️ Drop Your Post!")
-    uploaded_file = st.file_uploader("Choose an image...", type=["jpg", "jpeg", "png"])
-
-    if uploaded_file is not None:
-        image = Image.open(uploaded_file)
-        st.image(image, caption="Your uploaded image", use_column_width=True)
-
-# ========== CHAT ==========
+# ========== CHAT UI ==========
 def chat_ui():
-    st.subheader("💬 Chat with Us")
+    st.subheader("🎵 Ask for Song Recommendations")
+
     initialize_session_state()
 
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
 
-    if prompt := st.chat_input("What's on your mind?"):
+    user_input = st.chat_input("Type a genre and mood (e.g., 'sad pop', 'energetic kpop')")
+
+    if user_input:
         with st.chat_message("user"):
-            st.write(prompt)
+            st.write(user_input)
 
-        st.session_state.messages.append({"role": "user", "content": prompt})
+        st.session_state.messages.append({"role": "user", "content": user_input})
 
-        response = f"You said: {prompt}"  # Placeholder response (not Gemini yet)
+        # Ask Gemini for song suggestions
+        reply = get_songs_from_genre_and_mood(genre=user_input.split()[0], mood=" ".join(user_input.split()[1:]))
+
         with st.chat_message("assistant"):
-            st.write(response)
+            st.write(reply)
 
-        st.session_state.messages.append({"role": "assistant", "content": response})
+        st.session_state.messages.append({"role": "assistant", "content": reply})
 
-# ========== SIDEBAR ==========
-def sidebar():
-    with st.sidebar:
-        st.title("📱 Follow Us")
-        st.markdown("**Instagram**")
-        st.markdown("**TikTok**")
-
-# ========== MAIN APP ==========
+# ========== MAIN ==========
 def main():
-    st.title("🎶 Music Post App")
-    sidebar()
-    image_uploader()
-    music_recommender()
+    st.set_page_config(page_title="Gemini Music Chatbot 🎧", page_icon="🎶")
+    st.title("🎶 AI Music Recommender (Gemini)")
+    st.markdown("Just type a **genre + mood** and get personalized music suggestions!")
+
     chat_ui()
 
 if __name__ == "__main__":
