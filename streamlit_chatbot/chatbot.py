@@ -57,10 +57,38 @@ def chat_ui():
 # ========== MAIN ==========
 def main():
     st.set_page_config(page_title="Gemini Music Chatbot 🎧", page_icon="🎶")
-    st.title("🎶 AI Music Recommender (Gemini)")
+    st.title("🎶 Music Post")
     st.markdown("Just type a **genre + mood** and get personalized music suggestions!")
 
     chat_ui()
+    import streamlit as st
+import google.generativeai as genai
+
+# Load API key from Streamlit secrets
+GOOGLE_API_KEY = st.secrets.get("GOOGLE_API_KEY")
+
+# Safety check: Stop app if key is missing
+if not GOOGLE_API_KEY:
+    st.error("❌ GOOGLE_API_KEY not found in .streamlit/secrets.toml.")
+    st.stop()
+
+# Configure Gemini client
+genai.configure(api_key=GOOGLE_API_KEY)
+
+# Use a valid model name — update to match available models
+model = genai.GenerativeModel(model_name="models/gemini-1.5-pro")  # Example valid model
+
+# Generate music suggestions
+prompt = "Suggest 5 sad pop songs"
+response = model.generate_content(prompt)
+
+# Display suggestions
+if hasattr(response, "text"):
+    st.write("🎵 Music Suggestions:")
+    st.write(response.text)
+else:
+    st.error("❌ Failed to generate suggestions. Please check model compatibility.")
+
 
 if __name__ == "__main__":
     main()
