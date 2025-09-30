@@ -60,7 +60,7 @@ def chat_ui():
 # ========== MAIN ==========
 def main():
     st.set_page_config(page_title="Gemini Music Chatbot 🎧", page_icon="🎶")
-    st.title("🎶 AI Music Recommender (Gemini)")
+    st.title("🎶 Your Go-To Music")
     st.markdown("Just type any **genre, mood, or natural sentence** and get personalized music suggestions!")
 
     chat_ui()
