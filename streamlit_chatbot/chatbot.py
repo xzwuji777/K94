@@ -7,32 +7,25 @@ import urllib.parse
 # ========== CONFIG ==========
 GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
 genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel("gemini-2.5-flash")
+model = genai.GenerativeModel("gemini-1.5-flash")  # or "gemini-2.5-flash"
 
-CLIENT_ID = st.secrets["spotify"]["CLIENT_ID"]
-CLIENT_SECRET = st.secrets["spotify"]["CLIENT_SECRET"]
-REDIRECT_URI = st.secrets["spotify"]["REDIRECT_URI"]
-
-# ✅ Step 4: Debug secrets to ensure they load correctly
-st.write("🔑 Client ID loaded:", CLIENT_ID[:10] + "...")
-st.write("🌍 Redirect URI loaded:", REDIRECT_URI)
-
+# Spotify Auth
 sp_oauth = SpotifyOAuth(
-    client_id=CLIENT_ID,
-    client_secret=CLIENT_SECRET,
-    redirect_uri=REDIRECT_URI,
+    client_id=st.secrets["spotify"]["CLIENT_ID"],
+    client_secret=st.secrets["spotify"]["CLIENT_SECRET"],
+    redirect_uri=st.secrets["spotify"]["REDIRECT_URI"],
     scope="user-top-read user-read-recently-played user-read-email"
 )
 
-# ========== STATE ==========
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "spotify_token" not in st.session_state:
-    st.session_state.spotify_token = None
+# ========== STATE INIT ==========
+def initialize_session_state():
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    if "spotify_token" not in st.session_state:
+        st.session_state.spotify_token = None
 
 # ========== SPOTIFY HELPERS ==========
 def get_spotify_data():
-    """Fetch top artists and tracks for personalization."""
     if not st.session_state.spotify_token:
         return None
 
@@ -41,12 +34,12 @@ def get_spotify_data():
     top_artists = sp.current_user_top_artists(limit=5, time_range="short_term")
 
     return {
-        "top_tracks": [f"{t['name']} – {t['artists'][0]['name']}" for t in top_tracks["items"]],
+        "top_tracks": [f"{t['name']} – {t['artists'][0]['name']}" for t in top_tracks['items']],
         "top_artists": [a["name"] for a in top_artists["items"]],
     }
 
 def search_spotify_track(track_name, artist):
-    """Search track on Spotify and return a Spotify URL if found."""
+    """Search track on Spotify and return a URL if found."""
     try:
         sp = spotipy.Spotify(auth=st.session_state.spotify_token)
         query = f"{track_name} {artist}"
@@ -58,13 +51,12 @@ def search_spotify_track(track_name, artist):
     return None
 
 def get_youtube_search_url(song):
-    """Fallback: return a YouTube search link if no Spotify link is found."""
+    """Fallback: return a YouTube search link."""
     query = urllib.parse.quote(song)
     return f"https://www.youtube.com/results?search_query={query}"
 
 # ========== GEMINI LOGIC ==========
 def get_song_recommendations(user_message: str, spotify_data=None):
-    """Use Gemini to recommend songs based on user input + Spotify taste."""
     spotify_context = ""
     if spotify_data:
         spotify_context = (
@@ -88,32 +80,28 @@ def get_song_recommendations(user_message: str, spotify_data=None):
 
 # ========== CHAT UI ==========
 def chat_ui():
-    st.subheader("🎵 Go-To Music (Spotify + AI)")
+    st.subheader("🎵 Ask for Song Recommendations (Spotify + AI)")
 
-    # Display conversation so far
+    initialize_session_state()
+
     for msg in st.session_state.messages:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
 
+    # Spotify login button
     if not st.session_state.spotify_token:
-        # Step 1: Show login button
         auth_url = sp_oauth.get_authorize_url()
         st.markdown(f"[🔗 Connect Spotify]({auth_url})")
-
-        # Step 3: Handle token exchange
         query_params = st.query_params
-        if "code" in query_params:
-            try:
-                token_info = sp_oauth.get_access_token(query_params["code"], as_dict=True)
-                st.session_state.spotify_token = token_info["access_token"]
 
-                st.success("✅ Connected to Spotify! Refresh the page.")
-                st.rerun()
-            except Exception as e:
-                st.error(f"❌ Token exchange failed: {e}")
+        if "code" in query_params:
+            token_info = sp_oauth.get_access_token(query_params["code"])
+            st.session_state.spotify_token = token_info["access_token"]
+            st.success("✅ Connected to Spotify! Refresh the page.")
+            st.rerun()
         return
 
-    # Step 2: Chat after Spotify connected
+    # Chat input
     user_input = st.chat_input("Type your music request (e.g., 'upbeat study songs', 'sad pop', 'relaxing jazz')")
 
     if user_input:
@@ -121,11 +109,10 @@ def chat_ui():
             st.write(user_input)
         st.session_state.messages.append({"role": "user", "content": user_input})
 
-        # Get Spotify data + Gemini recommendations
         spotify_data = get_spotify_data()
         recommendations = get_song_recommendations(user_input, spotify_data)
 
-        # Show recommendations with Spotify/YouTube links
+        # Show recommendations with links
         reply_links = []
         for rec in recommendations:
             if "–" in rec:
