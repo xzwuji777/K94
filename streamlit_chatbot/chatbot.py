@@ -1,66 +1,112 @@
-# chatbot.py
 import streamlit as st
 import google.generativeai as genai
+from spotipy import Spotify
+from spotipy.oauth2 import SpotifyClientCredentials, SpotifyOAuth
+import urllib.parse
 
-# ========== CONFIG ==========
+# ========== CONFIG & AUTH ==========
 
-# Load Gemini API key from Streamlit secrets
 GOOGLE_API_KEY = st.secrets["GOOGLE_API_KEY"]
+SPOTIFY_CLIENT_ID = st.secrets["SPOTIFY_CLIENT_ID"]
+SPOTIFY_CLIENT_SECRET = st.secrets["SPOTIFY_CLIENT_SECRET"]
+SPOTIFY_REDIRECT_URI = st.secrets["SPOTIFY_REDIRECT_URI"]
 
 # Configure Gemini
 genai.configure(api_key=GOOGLE_API_KEY)
-model = genai.GenerativeModel("models/gemini-pro")
+model = genai.GenerativeModel("models/gemini-pro")  # adjusted model name
 
-# ========== STATE INIT ==========
-def initialize_session_state():
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+# Configure Spotify client (client credentials for search)
+spotify = Spotify(auth_manager=SpotifyClientCredentials(
+    client_id=SPOTIFY_CLIENT_ID,
+    client_secret=SPOTIFY_CLIENT_SECRET
+))
 
-# ========== SONG SUGGESTION LOGIC ==========
-def get_songs_from_genre_and_mood(genre, mood):
+# ========== FUNCTIONS ==========
+
+def get_songs_from_genre_and_mood(genre: str, mood: str) -> list[str]:
+    """
+    Ask Gemini to suggest songs (title + artist) based on genre and mood.
+    """
     prompt = (
-        f"Suggest 5 songs that fit the '{genre}' genre and a '{mood}' mood. "
-        "List only the song titles and artists in a clean, bullet-point format."
+        f"Suggest 5 songs (title + artist) that match the genre '{genre}' "
+        f"and the mood '{mood}'. Return them in a comma-separated format like:\n"
+        "Title1 — Artist1, Title2 — Artist2, ..."
     )
     try:
-        response = model.generate_content(prompt)
-        return response.text.strip()
+        resp = model.generate_content(prompt)
+        text = resp.text.strip()
+        # Split by comma, parse title and artist
+        items = [it.strip() for it in text.split(",") if it.strip()]
+        return items
     except Exception as e:
-        return f"❌ Failed to generate suggestions: {e}"
+        st.error("❌ Gemini AI error:")
+        st.exception(e)
+        return []
 
-# ========== CHAT UI ==========
-def chat_ui():
-    st.subheader("🎵 Ask for Song Recommendations")
+def spotify_search_track(query: str):
+    """
+    Search Spotify track, return first match metadata (preview_url, external url)
+    """
+    try:
+        results = spotify.search(q=query, type="track", limit=1)
+        items = results.get("tracks", {}).get("items", [])
+        if items:
+            track = items[0]
+            return {
+                "name": track["name"],
+                "artist": track["artists"][0]["name"],
+                "preview_url": track.get("preview_url"),
+                "spotify_url": track["external_urls"]["spotify"]
+            }
+    except Exception as e:
+        st.warning(f"Spotify search failed for {query}: {e}")
+    return None
 
-    initialize_session_state()
+def youtube_embed_url(song: str, artist: str) -> str:
+    """
+    Return YouTube search link or embed link fallback
+    """
+    # simplified: open search on YouTube
+    query = urllib.parse.quote_plus(f"{song} {artist}")
+    return f"https://www.youtube.com/results?search_query={query}"
 
-    for msg in st.session_state.messages:
-        with st.chat_message(msg["role"]):
-            st.write(msg["content"])
+# ========== STREAMLIT UI ==========
 
-    user_input = st.chat_input("Type a genre and mood (e.g., 'sad pop', 'energetic kpop')")
+st.set_page_config(page_title="🎶 Gemini + Spotify Music Recommender", page_icon="🎧")
+st.title("AI Song Recommender (Genre + Mood)")
 
-    if user_input:
-        with st.chat_message("user"):
-            st.write(user_input)
+genre = st.text_input("🎸 Enter music genre (e.g. pop, jazz, rock):")
+mood = st.text_input("🎭 Enter mood (e.g. happy, sad, energetic):")
 
-        st.session_state.messages.append({"role": "user", "content": user_input})
+if st.button("Recommend Songs"):
+    if not genre or not mood:
+        st.warning("Please enter both genre and mood.")
+    else:
+        with st.spinner("🎵 Generating suggestions..."):
+            suggestions = get_songs_from_genre_and_mood(genre, mood)
+        if suggestions:
+            st.subheader("🎯 Suggested Songs & Previews")
+            for i, item in enumerate(suggestions, start=1):
+                # item should be "Title — Artist"
+                parts = item.split("—")
+                if len(parts) == 2:
+                    song = parts[0].strip()
+                    artist = parts[1].strip()
+                else:
+                    # fallback if format is different
+                    song = item
+                    artist = ""
+                st.markdown(f"**{i}. {song} — {artist}**")
 
-        # Ask Gemini for song suggestions
-        reply = get_songs_from_genre_and_mood(genre=user_input.split()[0], mood=" ".join(user_input.split()[1:]))
-
-        with st.chat_message("assistant"):
-            st.write(reply)
-
-        st.session_state.messages.append({"role": "assistant", "content": reply})
-
-# ========== MAIN ==========
-def main():
-    st.set_page_config(page_title="Gemini Music Chatbot 🎧", page_icon="🎶")
-    st.title("🎶 Music To Go")
-    st.markdown("Just type a **genre + mood** and get personalized music suggestions!")
-
-    chat_ui()
-
-if __name__ == "__main__":
-    main()
+                # Search Spotify
+                track = spotify_search_track(f"{song} {artist}")
+                if track:
+                    if track["preview_url"]:
+                        st.audio(track["preview_url"])
+                    st.markdown(f"[Open in Spotify]({track['spotify_url']})")
+                else:
+                    # fallback to YouTube search link
+                    yt = youtube_embed_url(song, artist)
+                    st.markdown(f"[YouTube search]({yt})")
+        else:
+            st.warning("No song suggestions returned. Try different inputs.")
